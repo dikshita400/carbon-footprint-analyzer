@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>AI Carbon Footprint Analyzer</title>
+   <style>
+    body {
+        font-family: Arial, sans-serif;
+        background: #E6E6FA; /* Lavender */
+        color: #333;
+        text-align: center;
+        padding: 50px;
+    }
+
+    .container {
+        background: #87CEEB; /* Sky Blue */
+        padding: 30px;
+        border-radius: 15px;
+        width: 400px;
+        margin: auto;
+        box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+    }
+
+    h1 {
+        margin-bottom: 20px;
+        color: #2c3e50;
+    }
+
+    input {
+        width: 80%;
+        padding: 10px;
+        border-radius: 8px;
+        border: none;
+        margin-bottom: 15px;
+    }
+
+    button {
+        padding: 10px 20px;
+        border: none;
+        border-radius: 8px;
+        background: #4CAF50;
+        color: white;
+        font-size: 16px;
+        cursor: pointer;
+    }
+
+    button:hover {
+        background: #45a049;
+    }
+
+    .result {
+        margin-top: 20px;
+        text-align: left;
+        background: rgba(255,255,255,0.6);
+        padding: 15px;
+        border-radius: 10px;
+    }
+
+    .green { color: green; }
+    .yellow { color: orange; }
+    .red { color: red; }
+</style>
+</head>
+<body>
+
+<div class="container">
+    <h1>🌱 AI Carbon Analyzer</h1>
+
+    <input type="text" id="url" placeholder="Enter website URL">
+    <br>
+    <button onclick="analyze()">Analyze</button>
+
+    <div class="result" id="result"></div>
+</div>
+
+<script>
+function analyze() {
+    let url = document.getElementById("url").value;
+
+    fetch(`/analyze?url=${url}`)
+    .then(res => res.json())
+    .then(data => {
+
+        if (data.error) {
+            document.getElementById("result").innerHTML =
+                `<p style="color:red;">Error: ${data.error}</p>`;
+            return;
+        }
+
+        let scoreClass = "green";
+        if (data.estimated_co2_g > 0.2) scoreClass = "red";
+        else if (data.estimated_co2_g > 0.05) scoreClass = "yellow";
+
+        document.getElementById("result").innerHTML = `
+            <p><b>🌐 URL:</b> ${data.url}</p>
+            <p><b>📦 Page Size:</b> ${data.page_size_kb} KB</p>
+            <p class="${scoreClass}">
+                <b>🌍 CO₂ Emission:</b> ${data.estimated_co2_g} g
+            </p>
+            <p><b>💡 Suggestions:</b></p>
+            <ul>
+                ${data.suggestions.map(s => `<li>${s}</li>`).join("")}
+            </ul>
+        `;
+    });
+}
+</script>
+
+</body>
+</html>
