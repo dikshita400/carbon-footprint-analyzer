@@ -1,107 +1,288 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-    <meta charset="UTF-8">
-    <title>AI Carbon Footprint Analyzer</title>
-   <style>
-    body {
-        font-family: Arial, sans-serif;
-        background: #E6E6FA; /* Lavender */
-        color: #333;
-        text-align: center;
-        padding: 50px;
-    }
+    <title>AI Carbon Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0"></script>
 
-    .container {
-        background: #87CEEB; /* Sky Blue */
-        padding: 30px;
-        border-radius: 15px;
-        width: 400px;
-        margin: auto;
-        box-shadow: 0 10px 25px rgba(0,0,0,0.2);
-    }
+    <style>
+        body {
+            margin: 0;
+            font-family: 'Segoe UI';
+            background: linear-gradient(135deg, #1e3c72, #2a5298);
+            color: white;
+        }
 
-    h1 {
-        margin-bottom: 20px;
-        color: #2c3e50;
-    }
+        .navbar {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            padding: 15px;
+            background: rgba(255,255,255,0.1);
+        }
 
-    input {
-        width: 80%;
-        padding: 10px;
-        border-radius: 8px;
-        border: none;
-        margin-bottom: 15px;
-    }
+        .navbar button {
+            padding: 10px 20px;
+            border-radius: 20px;
+            border: none;
+            cursor: pointer;
+        }
 
-    button {
-        padding: 10px 20px;
-        border: none;
-        border-radius: 8px;
-        background: #4CAF50;
-        color: white;
-        font-size: 16px;
-        cursor: pointer;
-    }
+        .section {
+            display: none;
+            padding: 40px;
+            text-align: center;
+            animation: fadeIn 0.5s ease;
+        }
 
-    button:hover {
-        background: #45a049;
-    }
+        .active { display: block; }
 
-    .result {
-        margin-top: 20px;
-        text-align: left;
-        background: rgba(255,255,255,0.6);
-        padding: 15px;
-        border-radius: 10px;
-    }
+        @keyframes fadeIn {
+            from {opacity:0; transform:translateY(20px);}
+            to {opacity:1;}
+        }
 
-    .green { color: green; }
-    .yellow { color: orange; }
-    .red { color: red; }
-</style>
+        input {
+            padding: 12px;
+            width: 60%;
+            border-radius: 20px;
+            border: none;
+        }
+
+        .btn {
+            padding: 12px 25px;
+            margin-top: 15px;
+            border-radius: 20px;
+            border: none;
+            background: #00c6ff;
+            color: white;
+        }
+
+        .kpi-container {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            flex-wrap: wrap;
+            margin-top: 20px;
+        }
+
+        .kpi {
+            background: rgba(255,255,255,0.1);
+            padding: 20px;
+            border-radius: 20px;
+            width: 150px;
+            animation: pop 0.5s ease;
+        }
+
+        @keyframes pop {
+            from {transform: scale(0.8); opacity:0;}
+            to {transform: scale(1); opacity:1;}
+        }
+
+        .charts {
+            width: 70%;
+            height: 400px;
+            margin: 30px auto;
+            background: rgba(255,255,255,0.1);
+            border-radius: 20px;
+        }
+
+        canvas {
+            width: 100% !important;
+            height: 100% !important;
+        }
+    </style>
 </head>
+
 <body>
 
-<div class="container">
-    <h1>🌱 AI Carbon Analyzer</h1>
+<div class="navbar">
+    <button onclick="show('analyze')">Analyze</button>
+    <button onclick="show('compare')">Compare</button>
+</div>
 
-    <input type="text" id="url" placeholder="Enter website URL">
+<!-- ANALYZE -->
+<div id="analyze" class="section active">
+    <h1>🌱 Carbon Analyzer</h1>
+
+    <input id="url1" placeholder="Enter website URL">
     <br>
-    <button onclick="analyze()">Analyze</button>
+    <button class="btn" onclick="analyze()">Analyze</button>
 
-    <div class="result" id="result"></div>
+    <div id="kpi1" class="kpi-container"></div>
+
+    <div class="charts">
+        <canvas id="singleChart"></canvas>
+    </div>
+</div>
+
+<!-- COMPARE -->
+<div id="compare" class="section">
+    <h1>📊 Compare Websites</h1>
+
+    <input id="url2" placeholder="url1, url2">
+    <br>
+    <button class="btn" onclick="compare()">Compare</button>
+
+    <div id="kpi2" class="kpi-container"></div>
+
+    <div class="charts">
+        <canvas id="chart1"></canvas>
+    </div>
+
+    <div class="charts">
+        <canvas id="chart2"></canvas>
+    </div>
 </div>
 
 <script>
-function analyze() {
-    let url = document.getElementById("url").value;
+let singleChart, chart1, chart2;
+
+function show(sec){
+    document.querySelectorAll(".section").forEach(s=>s.classList.remove("active"));
+    document.getElementById(sec).classList.add("active");
+}
+
+function analyze(){
+    let url = document.getElementById("url1").value;
 
     fetch(`/analyze?url=${url}`)
-    .then(res => res.json())
-    .then(data => {
+    .then(r=>r.json())
+    .then(data=>{
+        let d = data[0];
+        if(!d || d.error) return alert("Error");
 
-        if (data.error) {
-            document.getElementById("result").innerHTML =
-                `<p style="color:red;">Error: ${data.error}</p>`;
-            return;
-        }
-
-        let scoreClass = "green";
-        if (data.estimated_co2_g > 0.2) scoreClass = "red";
-        else if (data.estimated_co2_g > 0.05) scoreClass = "yellow";
-
-        document.getElementById("result").innerHTML = `
-            <p><b>🌐 URL:</b> ${data.url}</p>
-            <p><b>📦 Page Size:</b> ${data.page_size_kb} KB</p>
-            <p class="${scoreClass}">
-                <b>🌍 CO₂ Emission:</b> ${data.estimated_co2_g} g
-            </p>
-            <p><b>💡 Suggestions:</b></p>
-            <ul>
-                ${data.suggestions.map(s => `<li>${s}</li>`).join("")}
-            </ul>
+        // KPI
+        document.getElementById("kpi1").innerHTML = `
+            <div class="kpi">CO₂<br><b>${d.co2}</b></div>
+            <div class="kpi">Requests<br><b>${d.requests}</b></div>
+            <div class="kpi">Load<br><b>${d.load_time}s</b></div>
+            <div class="kpi">Score<br><b>${d.score}</b></div>
         `;
+
+        if(singleChart) singleChart.destroy();
+
+        singleChart = new Chart(document.getElementById("singleChart"), {
+            type:"bar",
+            data:{
+                labels:["Size","Requests","Load","CO2"],
+                datasets:[{
+                    label:"Metrics",
+                    data:[
+                        Number(d.size_kb),
+                        Number(d.requests),
+                        Number(d.load_time),
+                        Number(d.co2)
+                    ],
+                    backgroundColor:[
+                        "#ff6b6b",
+                        "#feca57",
+                        "#48dbfb",
+                        "#1dd1a1"
+                    ],
+                    borderColor:"#ffffff",
+                    borderWidth:2
+                }]
+            },
+            options:{
+                responsive:true,
+                animation:{duration:1200},
+                plugins:{
+                    legend:{labels:{color:"white"}}
+                },
+                scales:{
+                    x:{
+                        ticks:{color:"white"},
+                        grid:{color:"rgba(255,255,255,0.2)"}
+                    },
+                    y:{
+                        beginAtZero:true,
+                        ticks:{color:"white"},
+                        grid:{color:"rgba(255,255,255,0.2)"}
+                    }
+                }
+            }
+        });
+    });
+}
+
+function compare(){
+    let urls = document.getElementById("url2").value.split(",");
+
+    fetch(`/analyze?` + urls.map(u=>`url=${u.trim()}`).join("&"))
+    .then(r=>r.json())
+    .then(data=>{
+
+        let labels=[], co2=[], req=[];
+        let totalCO2=0, totalReq=0;
+
+        data.forEach(d=>{
+            if(!d.error){
+                labels.push(d.url);
+                co2.push(Number(d.co2));
+                req.push(Number(d.requests));
+                totalCO2+=Number(d.co2);
+                totalReq+=Number(d.requests);
+            }
+        });
+
+        let avgCO2 = (totalCO2/labels.length).toFixed(3);
+        let avgReq = Math.round(totalReq/labels.length);
+        let bestIndex = co2.indexOf(Math.min(...co2));
+
+        document.getElementById("kpi2").innerHTML = `
+            <div class="kpi">Avg CO₂<br><b>${avgCO2}</b></div>
+            <div class="kpi">Avg Req<br><b>${avgReq}</b></div>
+            <div class="kpi">Best Site<br><b>${labels[bestIndex]}</b></div>
+        `;
+
+        if(chart1) chart1.destroy();
+        if(chart2) chart2.destroy();
+
+        // CO2 BAR CHART
+        chart1 = new Chart(document.getElementById("chart1"), {
+            type:"bar",
+            data:{
+                labels,
+                datasets:[{
+                    label:"CO₂ Emission",
+                    data:co2,
+                    backgroundColor:"#ff9f43",
+                    borderColor:"#ffffff",
+                    borderWidth:2
+                }]
+            },
+            options:{
+                plugins:{legend:{labels:{color:"white"}}},
+                scales:{
+                    x:{ticks:{color:"white"}},
+                    y:{ticks:{color:"white"}, beginAtZero:true}
+                }
+            }
+        });
+
+        // REQUEST LINE CHART
+        chart2 = new Chart(document.getElementById("chart2"), {
+            type:"line",
+            data:{
+                labels,
+                datasets:[{
+                    label:"Requests",
+                    data:req,
+                    borderColor:"#00d2d3",
+                    backgroundColor:"rgba(0,210,211,0.2)",
+                    fill:true,
+                    tension:0.4
+                }]
+            },
+            options:{
+                plugins:{legend:{labels:{color:"white"}}},
+                scales:{
+                    x:{ticks:{color:"white"}},
+                    y:{ticks:{color:"white"}, beginAtZero:true}
+                }
+            }
+        });
+
     });
 }
 </script>
